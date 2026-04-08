@@ -104,6 +104,6 @@ openenv push --repo-id yourname/customer-support-env
 
 | Task | Expected Score |
 |------|---------------|
-| `easy_refund` | ~0.99 |
-| `medium_triage` | ~0.99 |
-| `hard_mixed` | ~0.66–0.99 |
+| `easy_refund` | 1.00 |
+| `medium_triage` | 1.00 |
+| `hard_mixed` | 0.67–1.00 |

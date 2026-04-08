@@ -59,6 +59,7 @@ INSTRUCTIONS:
 - Pick ONE ticket that has status "open".
 - Choose the correct action according to the policy.
 - Output a single JSON action. Valid action_type values: refund, replace, escalate, ask_info, done.
+- In the 'reason' field, provide a very brief justification referencing the relevant policy rule (1-5).
 - Call 'done' only when ALL tickets are in their final state (not 'open').
 """
 

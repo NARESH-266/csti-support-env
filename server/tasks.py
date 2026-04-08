@@ -21,7 +21,7 @@ class SupportTask:
 
     def grade(self, current_tickets: List[Dict[str, Any]]) -> float:
         """
-        Returns a score between 0.01 and 0.99 based on how many tickets match their expected status.
+        Returns a score between 0.0 and 1.0 based on how many tickets match their expected status.
         """
         if not self.expected_statuses:
             score = 1.0
@@ -34,7 +34,7 @@ class SupportTask:
                     correct += 1
             score = correct / total
             
-        return max(0.01, min(0.99, score))
+        return float(score)
 
 easy_task = SupportTask(
     task_id="easy_refund",

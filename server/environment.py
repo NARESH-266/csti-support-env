@@ -24,7 +24,7 @@ class SupportEnvironment(Environment):
         self._episode_id = ""
         self._step_count = 0
         self._done = True
-        self._score = 0.01
+        self._score = 0.0
 
     def reset(
         self,
@@ -51,7 +51,7 @@ class SupportEnvironment(Environment):
         self._episode_id = episode_id or str(uuid.uuid4())
         self._step_count = 0
         self._done = False
-        self._score = 0.01
+        self._score = 0.0
         self._current_tickets = copy.deepcopy(self._task.initial_tickets)
 
         return SupportObservation(
@@ -67,7 +67,7 @@ class SupportEnvironment(Environment):
         """Process an action and return the new observation.
         
         Reward is computed as the fraction of tickets correctly resolved.
-        Scores are clamped to [0.01, 0.99].
+        Scores are in the range [0.0, 1.0].
         """
         self._step_count += 1
 
@@ -106,7 +106,7 @@ class SupportEnvironment(Environment):
 
         # Compute reward via grader
         raw_score = self._task.grade(self._current_tickets)
-        self._score = raw_score  # grader already clamps to [0.01, 0.99]
+        self._score = raw_score 
 
         # Cap steps
         if self._step_count >= self._task.max_steps:
