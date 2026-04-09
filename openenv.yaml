@@ -1,0 +1,50 @@
+name: csti-support-intelligence
+version: "1.0.0"
+description: >
+  A real-world OpenEnv environment for AI-driven customer support triage.
+  Agents must analyze incoming tickets, route them to the correct department,
+  assign a priority level, and apply relevant metadata tags.
+author: "Antigravity AI"
+tags:
+  - openenv
+  - triage
+  - customer-support
+  - classification
+  - real-world
+
+environment:
+  type: structured
+  max_steps: 1
+  entry_point: "decision_env.env:create_env"
+
+tasks:
+  - id: easy_login_issue
+    name: "Password Reset Help (Easy)"
+    difficulty: easy
+    description: "Clear technical support request for a password reset."
+
+  - id: medium_billing_angry
+    name: "Duplicate Charge & Angry Customer (Medium)"
+    difficulty: medium
+    description: "Mixed intent involving billing error and high negative sentiment."
+
+  - id: hard_policy_exception
+    name: "VIP Damage Claim & Policy Exception (Hard)"
+    difficulty: hard
+    description: "Complex request with policy constraints, VIP status, and multi-department overlap."
+
+observation_space:
+  description: >
+    A structured Pydantic Observation containing:
+    - ticket_id: Unique identifier
+    - content: The text of the ticket
+    - customer_segment: segment (standard/vip)
+    - step_count/max_steps
+
+action_space:
+  description: >
+    A structured Pydantic Action containing:
+    - department: technical, billing, sales, logistics, general
+    - priority: low, medium, high, urgent
+    - tags: list of strings
+    - explanation: optional reasoning
