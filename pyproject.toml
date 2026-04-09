@@ -13,9 +13,13 @@ dependencies = [
     "pydantic>=2.0.0",
     "openai>=1.0.0",
     "fastapi>=0.100.0",
-    "uvicorn>=0.20.0"
+    "uvicorn>=0.20.0",
+    "openenv-core>=0.2.0"
 ]
 requires-python = ">=3.10"
 
+[project.scripts]
+server = "server.app:app"
+
 [tool.setuptools]
-packages = ["decision_env"]
+packages = ["decision_env", "server"]
