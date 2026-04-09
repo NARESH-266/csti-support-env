@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
-from .env import create_env
-from .models import Action
+from decision_env.env import create_env
+from decision_env.models import Action
 
 app = FastAPI(title="OpenEnv CSTI Server")
 

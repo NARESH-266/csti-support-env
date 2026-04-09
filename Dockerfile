@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt fastapi uvicorn pydantic openai
+RUN pip install --no-cache-dir -r requirements.txt fastapi uvicorn pydantic openai openenv-core
 
 # Copy the project files
 COPY . .
@@ -17,4 +17,4 @@ EXPOSE 7860
 # However, usually the evaluation platform handles this by importing the env.py
 # But providing a server is safer for deployment.
 
-CMD ["uvicorn", "decision_env.server:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
