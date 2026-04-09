@@ -3,6 +3,7 @@ from typing import Dict, Any
 
 
 def evaluate(action: Action, task: Dict[str, Any]) -> Reward:
+    """Grades the final triage action of the agent."""
     score = 0.0
     reasons = []
 
@@ -37,9 +38,11 @@ def evaluate(action: Action, task: Dict[str, Any]) -> Reward:
         reasons.append("Invalid priority")
 
     # --- Tags (20%) ---
-    # Support both 'tags' and 'required_tags' keys
     expected_tags = set(expected.get("tags", expected.get("required_tags", [])))
-    predicted_tags = set(action.tags)
+    if action.tags:
+        predicted_tags = set(action.tags)
+    else:
+        predicted_tags = set()
 
     if expected_tags:
         matches = len(expected_tags & predicted_tags)
@@ -50,18 +53,19 @@ def evaluate(action: Action, task: Dict[str, Any]) -> Reward:
         reasons.append("No tags required")
 
     # --- FINAL SAFETY CLAMP (CRITICAL) ---
-    # Prevent EXACT 0.0 or 1.0
+    # Prevent EXACT 0.0 or 1.0 (Round 2 requirement)
     if score <= 0.0:
         score = 0.01
     elif score >= 1.0:
         score = 0.99
 
-    # Extra safety buffer (handles floating precision edge cases)
+    # Extra safety buffer
     score = max(0.01, min(0.99, score))
 
     return Reward(
-        score=score,  # NO ROUNDING - raw float to avoid precision issues
-        reason=" | ".join(reasons)
+        score=score,
+        reason=" | ".join(reasons),
+        is_final=True
     )
 
 

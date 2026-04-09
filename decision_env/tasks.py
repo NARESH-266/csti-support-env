@@ -17,6 +17,9 @@ TASKS: Dict[str, Dict[str, Any]] = {
             "department": "technical",
             "priority": "medium",
             "required_tags": ["login", "password-reset"],
+        },
+        "hidden_info": {
+            "customer_record": {"status": "Active", "note": "User changed password recently."}
         }
     },
     "medium_billing_angry": {
@@ -35,6 +38,9 @@ TASKS: Dict[str, Dict[str, Any]] = {
             "department": "billing",
             "priority": "high",
             "required_tags": ["refund", "angry", "double-charge"],
+        },
+        "hidden_info": {
+            "customer_record": {"status": "Active", "note": "Duplicate transaction ID #9988 detected in logs."}
         }
     },
     "hard_policy_exception": {
@@ -57,6 +63,32 @@ TASKS: Dict[str, Dict[str, Any]] = {
             "department": "logistics",
             "priority": "urgent",
             "required_tags": ["damaged-item", "policy-exception", "replacement", "churn-risk", "rain-damage"],
+        },
+        "hidden_info": {
+            "customer_record": {"status": "VIP Platinum", "note": "Customer has 1M followers on X. High Churn Risk."},
+            "system_status": {"logistics": {"error": "Weather delay in regional hub", "time": "2024-04-09 10:00 AM"}}
+        }
+    },
+    "hard_hidden_failure_mode": {
+        "id": "hard_hidden_failure_mode",
+        "name": "Ambiguous System Error (Tool-use Test)",
+        "difficulty": "hard",
+        "description": "Ambiguous ticket where tool-use is required to identify the root cause.",
+        "input": {
+            "ticket_id": "TKT-004",
+            "content": "Everything is broken. I can't do anything on the site. I keep getting an error message when I click the 'Save' button. This is costing me money. Fix it ASAP.",
+            "customer_segment": "standard",
+            "sla_deadline": "4 hours",
+            "ticket_history": ["2024-04-01: Usage normal"]
+        },
+        "ground_truth": {
+            "department": "billing", # Root cause found via tools
+            "priority": "high",
+            "required_tags": ["system-failure", "subscription-expired", "hidden-cause"],
+        },
+        "hidden_info": {
+            "customer_record": {"status": "Suspended", "note": "Subscription expired 10 mins ago. Needs payment."},
+            "system_status": {"billing": {"error": "Stripe API Connectivity issues", "time": "Just now"}}
         }
     }
 }
