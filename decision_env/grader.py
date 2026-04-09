@@ -54,8 +54,8 @@ class TriageGrader:
             else:
                 reasons.append("No relevant tags matched.")
 
-        # Strict clamping between 0.0 and 1.0
-        score = max(0.0, min(1.0, score))
+        # Strict clamping: must be STRICTLY between 0 and 1 (not 0.0 and not 1.0)
+        score = max(0.01, min(0.99, score))
 
         return Reward(
             score=round(score, 2),
