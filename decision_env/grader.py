@@ -1,64 +1,71 @@
-from .models import Action, Reward
+from decision_env.models import Reward, Action
 from typing import Dict, Any
 
-class TriageGrader:
-    def grade(self, action: Action, ground_truth: Dict[str, Any]) -> Reward:
-        """
-        Grades the agent's action against the ground truth.
-        Returns a Reward model with a score between 0.01 and 0.99.
-        (Clamping for strict validation if needed, but the user asked for 0.0 to 1.0).
-        Actually, let's stick to 0.0-1.0 as requested, but ensure differentiation.
-        """
-        score = 0.0
-        reasons = []
 
-        # 1. Department Routing (50%)
-        # Reward smoothing: Small partial credit (0.1) for just taking an action
-        # and 0.5 for a correct match.
-        if action.department == ground_truth["department"]:
-            score += 0.5
-            reasons.append("Correct department routing (+0.5).")
+def evaluate(action: Action, task: Dict[str, Any]) -> Reward:
+    score = 0.0
+    reasons = []
+
+    # Support both 'expected' and 'ground_truth' keys for compatibility
+    expected = task.get("expected", task.get("ground_truth", {}))
+
+    # --- Department (50%) ---
+    if action.department == expected.get("department"):
+        score += 0.5
+        reasons.append("Correct department")
+    else:
+        score += 0.05
+        reasons.append("Wrong department")
+
+    # --- Priority (30%) ---
+    expected_priority = expected.get("priority", "medium")
+    priority_map = {"low": 1, "medium": 2, "high": 3, "urgent": 4}
+
+    if action.priority in priority_map and expected_priority in priority_map:
+        diff = abs(priority_map[action.priority] - priority_map[expected_priority])
+        if diff == 0:
+            score += 0.3
+            reasons.append("Correct priority")
+        elif diff == 1:
+            score += 0.15
+            reasons.append("Close priority")
         else:
-            score += 0.05 # Tiny participation reward for routing effort
-            reasons.append(f"Incorrect department. Expected {ground_truth['department']}, got {action.department}. (+0.05 partial)")
+            score += 0.05
+            reasons.append("Wrong priority")
+    else:
+        score += 0.05
+        reasons.append("Invalid priority")
 
-        # 2. Priority Assignment (30%)
-        priorities = ["low", "medium", "high", "urgent"]
-        try:
-            target_idx = priorities.index(ground_truth["priority"])
-            actual_idx = priorities.index(action.priority)
-            distance = abs(target_idx - actual_idx)
-            
-            if distance == 0:
-                score += 0.3
-                reasons.append("Correct priority assignment (+0.3).")
-            elif distance == 1:
-                score += 0.15
-                reasons.append("Priority is near-match (+0.15).")
-            elif distance == 2:
-                score += 0.05
-                reasons.append("Priority is somewhat close (+0.05).")
-            else:
-                reasons.append("Priority assignment is significantly incorrect.")
-        except ValueError:
-            reasons.append("Invalid priority value.")
+    # --- Tags (20%) ---
+    # Support both 'tags' and 'required_tags' keys
+    expected_tags = set(expected.get("tags", expected.get("required_tags", [])))
+    predicted_tags = set(action.tags)
 
-        # 3. Tags (20%)
-        required_tags = ground_truth.get("required_tags", [])
-        if required_tags:
-            matches = set(action.tags).intersection(set(required_tags))
-            tag_score = (len(matches) / len(required_tags)) * 0.2
-            score += tag_score
-            if len(matches) > 0:
-                reasons.append(f"Matched {len(matches)}/{len(required_tags)} required tags (+{tag_score:.2f}).")
-            else:
-                reasons.append("No relevant tags matched.")
+    if expected_tags:
+        matches = len(expected_tags & predicted_tags)
+        tag_score = (matches / len(expected_tags)) * 0.2
+        score += tag_score
+        reasons.append(f"Tag match {matches}/{len(expected_tags)}")
+    else:
+        reasons.append("No tags required")
 
-        # Strict clamping: must be STRICTLY between 0 and 1 (not 0.0 and not 1.0)
-        score = max(0.01, min(0.99, score))
+    # --- FINAL SAFETY CLAMP (CRITICAL) ---
+    # Prevent EXACT 0.0 or 1.0
+    if score <= 0.0:
+        score = 0.01
+    elif score >= 1.0:
+        score = 0.99
 
-        return Reward(
-            score=round(score, 2),
-            reason=" | ".join(reasons),
-            is_final=True
-        )
+    # Extra safety buffer (handles floating precision edge cases)
+    score = max(0.01, min(0.99, score))
+
+    return Reward(
+        score=score,  # NO ROUNDING - raw float to avoid precision issues
+        reason=" | ".join(reasons)
+    )
+
+
+class TriageGrader:
+    """Wrapper class for openenv.yaml grader reference compatibility."""
+    def grade(self, action: Action, ground_truth: Dict[str, Any]) -> Reward:
+        return evaluate(action, {"ground_truth": ground_truth})
