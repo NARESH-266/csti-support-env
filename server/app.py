@@ -51,3 +51,10 @@ def state(task_id: str = "easy_login_issue"):
     if task_id not in envs:
         raise HTTPException(status_code=404, detail="Task environment not initialized.")
     return envs[task_id].state()
+
+def main():
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=7860)
+
+if __name__ == "__main__":
+    main()
