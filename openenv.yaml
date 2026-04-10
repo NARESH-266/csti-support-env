@@ -1,12 +1,8 @@
-name: "ml-experiment-debugger"
-version: "1.0.0"
-description: "A real-world environment where an AI agent acts as an ML Engineer to debug and optimize broken training experiments."
+name: "ml-debug-env"
+version: "1.0.1"
+description: "High-fidelity ML Experiment Debugging Simulator for AI Agents."
 author: "Antigravity"
-tags:
-  - machine-learning
-  - debugging
-  - software-engineering
-  - technical-reasoning
+tags: ["ml", "debugging"]
 
 environment:
   type: structured
@@ -14,26 +10,28 @@ environment:
   entry_point: "decision_env.env:create_env"
 
 tasks:
-  - id: "easy_lr_issue"
-    name: "Sub-optimal Learning Rate"
+  - id: easy_lr_issue
+    name: "Task 1: Learning Rate Convergence"
     difficulty: "easy"
-    description: "The experiment fails to converge due to an extremely low learning rate."
     grader: "decision_env.grader:MLDebugGrader"
   
-  - id: "medium_vanishing_gradient"
-    name: "Deep Network Vanishing Gradients"
+  - id: medium_vanishing_gradient
+    name: "Task 2: Vanishing Gradients"
     difficulty: "medium"
-    description: "A deep MLP is missing normalization, causing gradients to vanish and training to stall."
     grader: "decision_env.grader:MLDebugGrader"
 
-  - id: "hard_data_leakage"
-    name: "Validation Split Data Leakage"
+  - id: hard_data_leakage
+    name: "Task 3: Data Split Leakage"
     difficulty: "hard"
-    description: "Identify and fix a case where validation set contamination causes suspiciously perfect metrics that don't generalize."
+    grader: "decision_env.grader:MLDebugGrader"
+
+  - id: bonus_complexity_test
+    name: "Task 4: Extreme Optimization"
+    difficulty: "hard"
     grader: "decision_env.grader:MLDebugGrader"
 
 observation_space:
-  description: "Training config, time-series metrics (loss/accuracy), and simulated console logs."
+  description: "Training config, metrics, and logs."
 
 action_space:
-  description: "Config overrides (dictionary) and training control (run N epochs)."
+  description: "Config overrides and run commands."
