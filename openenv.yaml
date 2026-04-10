@@ -18,16 +18,19 @@ tasks:
     name: "Sub-optimal Learning Rate"
     difficulty: "easy"
     description: "The experiment fails to converge due to an extremely low learning rate."
+    grader: "decision_env.grader:MLDebugGrader"
   
   - id: "medium_vanishing_gradient"
     name: "Deep Network Vanishing Gradients"
     difficulty: "medium"
     description: "A deep MLP is missing normalization, causing gradients to vanish and training to stall."
+    grader: "decision_env.grader:MLDebugGrader"
 
   - id: "hard_data_leakage"
     name: "Validation Split Data Leakage"
     difficulty: "hard"
     description: "Identify and fix a case where validation set contamination causes suspiciously perfect metrics that don't generalize."
+    grader: "decision_env.grader:MLDebugGrader"
 
 observation_space:
   description: "Training config, time-series metrics (loss/accuracy), and simulated console logs."
