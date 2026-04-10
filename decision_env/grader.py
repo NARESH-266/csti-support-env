@@ -69,7 +69,32 @@ def evaluate(action: Action, task: Dict[str, Any]) -> Reward:
     )
 
 
+def evaluate_score(action: Any, ground_truth: Dict[str, Any]) -> float:
+    """Wrapper that returns a float score directly, strictly clamped between 0.01 and 0.99."""
+    if isinstance(action, dict):
+        # Convert dict to Action model for evaluate function
+        from .models import Action
+        action = Action(**action)
+    
+    reward = evaluate(action, {"ground_truth": ground_truth})
+    
+    # Final strict clamping for the platform requirement (strictly >0 and <1)
+    score = float(reward.score)
+    if score <= 0.0:
+        return 0.01
+    if score >= 1.0:
+        return 0.99
+    
+    return max(0.01, min(0.99, score))
+
+
 class TriageGrader:
     """Wrapper class for openenv.yaml grader reference compatibility."""
     def grade(self, action: Action, ground_truth: Dict[str, Any]) -> Reward:
-        return evaluate(action, {"ground_truth": ground_truth})
+        score = evaluate_score(action, ground_truth)
+        # Re-wrap in Reward for existing env.py compatibility
+        return Reward(
+            score=score,
+            reason="Triage evaluated",
+            is_final=True
+        )

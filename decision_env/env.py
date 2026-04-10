@@ -1,113 +1,85 @@
-import json
-from typing import Tuple, Dict, Any, Optional, List
-from .models import Action, Observation, Reward
+from typing import Tuple, Dict, Any
+from models import MLObservation, MLAction, MLReward
+from .simulation import TrainingSimulator
 from .tasks import get_task
-from .grader import TriageGrader
-from .tools import ToolRegistry
 
-class CSTIEnv:
-    """Advanced Customer Support Ticket Intelligence Environment (Multi-turn Tool-use)."""
+class MLEnv:
+    """The ML Experiment Debugging Environment."""
     
-    def __init__(self, task_id: str = "easy_login_issue", max_steps: int = 5):
+    def __init__(self, task_id: str = "easy_lr_issue"):
         self.task_id = task_id
         self.task_data = get_task(task_id)
-        self.grader = TriageGrader()
-        self.tool_registry = ToolRegistry()
-        self.init_max_steps = max_steps
-        self.reset()
-
-    def reset(self) -> Observation:
-        """Resets the environment to the initial state."""
-        self.current_step = 0
-        self.max_steps = self.init_max_steps
+        self.simulator = TrainingSimulator(hidden_bug=self.task_data["hidden_bug"])
+        self.config = self.task_data["initial_config"].copy()
+        self.step_count = 0
+        self.max_steps = 10
         self.done = False
-        self.messages = []
-        self.last_reward = None
-        
+        self.logs = []
+        self.metrics = {"train_loss": [], "val_accuracy": []}
+
+    def reset(self) -> MLObservation:
+        self.step_count = 0
+        self.done = False
+        # Initial run to generate some metrics
+        self.metrics, new_logs = self.simulator.simulate(self.config, 5)
+        self.logs = new_logs
         return self._get_observation()
 
-    def step(self, action: Any) -> Tuple[Observation, float, bool, Dict[str, Any]]:
-        """
-        Takes an action (Triage or ToolCall) and returns (observation, reward, done, info).
-        """
+    def step(self, action: MLAction) -> Tuple[MLObservation, float, bool, Dict[str, Any]]:
         if self.done:
-            raise RuntimeError("Environment is already done. Please call reset().")
+            raise RuntimeError("Env is done")
 
-        # Parse action logic
-        if isinstance(action, str):
-            try:
-                action_data = json.loads(action)
-                action = Action(**action_data)
-            except:
-                pass
-        elif isinstance(action, dict):
-            action = Action(**action)
+        self.step_count += 1
+        info = {}
 
-        self.current_step += 1
-        
-        # 1. Handle Tool Calls (Intermediate Steps)
-        if action.tool_call:
-            tool_name = action.tool_call.name
-            tool_args = action.tool_call.arguments
+        if action.action_type == "update_config":
+            if action.config_overrides:
+                self.config.update(action.config_overrides)
+            info["message"] = "Config updated"
             
-            # Execute tool
-            result = self.tool_registry.call_tool(tool_name, tool_args, self.task_data)
+        elif action.action_type == "run_training":
+            epochs = action.epochs_to_run or 5
+            self.metrics, new_logs = self.simulator.simulate(self.config, epochs)
+            self.logs.extend(new_logs)
+            info["message"] = f"Ran {epochs} epochs"
             
-            # Update message history
-            self.messages.append({"role": "assistant", "content": f"Call tool: {tool_name}"})
-            self.messages.append({"role": "tool", "content": result})
-            
-            # Check if exceeded max steps
-            if self.current_step >= self.max_steps:
-                self.done = True
-                # No reward for timeout
-                return self._get_observation(), 0.0, True, {"reason": "Max steps exceeded", "task_id": self.task_id}
-            
-            return self._get_observation(), 0.0, False, {"reason": "Tool called", "task_id": self.task_id}
-
-        # 2. Handle Triage Action (Terminal Step)
-        if action.department:
-            reward_model = self.grader.grade(action, self.task_data["ground_truth"])
-            self.last_reward = reward_model
+        elif action.action_type == "submit":
             self.done = True
-            
-            # Small penalty for efficiency (optional, but good for Round 2)
-            # score = reward_model.score * (0.95 ** (self.current_step - 1))
-            score = reward_model.score
-            
-            return self._get_observation(), score, True, {
-                "reason": reward_model.reason,
-                "task_id": self.task_id
-            }
+            info["message"] = "Agent submitted solution"
 
-        # 3. Handle Invalid Action
-        self.done = True
-        return self._get_observation(), 0.0, True, {"reason": "Invalid action format", "task_id": self.task_id}
+        # Calculate reward
+        reward_model = self._calculate_reward()
+        
+        if self.step_count >= self.max_steps:
+            self.done = True
 
-    def state(self) -> Dict[str, Any]:
-        """Returns the internal state of the environment."""
-        return {
-            "task_id": self.task_id,
-            "current_step": self.current_step,
-            "done": self.done,
-            "ground_truth": self.task_data["ground_truth"],
-            "messages": self.messages
-        }
+        return self._get_observation(), reward_model.score, self.done, info
 
-    def _get_observation(self) -> Observation:
-        """Constructs the observation model."""
-        input_data = self.task_data["input"]
-        return Observation(
-            ticket_id=input_data["ticket_id"],
-            content=input_data["content"],
-            customer_segment=input_data["customer_segment"],
-            sla_deadline=input_data["sla_deadline"],
-            ticket_history=input_data["ticket_history"],
-            step_count=self.current_step,
-            max_steps=self.max_steps,
-            messages=self.messages,
-            available_tools=self.tool_registry.get_available_tools()
+    def _get_observation(self) -> MLObservation:
+        return MLObservation(
+            ticket_id=f"DEBUG-{self.task_id}",
+            config=self.config,
+            metrics=self.metrics,
+            logs=self.logs[-10:], # Last 10 logs
+            step_count=self.step_count,
+            is_done=self.done
         )
 
-def create_env(task_id: str = "easy_login_issue", **kwargs):
-    return CSTIEnv(task_id=task_id, **kwargs)
+    def _calculate_reward(self) -> MLReward:
+        # Success is determined by the final validation accuracy reaching the target
+        current_acc = self.metrics["val_accuracy"][-1] if self.metrics["val_accuracy"] else 0.0
+        target_acc = self.task_data["target_accuracy"]
+        
+        # Grading remains strict 0.01 - 0.99
+        score = (current_acc / target_acc) * 0.99
+        if self.done and current_acc >= target_acc:
+            score = 0.99
+        
+        return MLReward(
+            score=max(0.01, min(0.99, score)),
+            reason=f"Current accuracy: {current_acc:.4f} / Target: {target_acc}",
+            is_final=self.done
+        )
+
+def create_env(task_id: str = "easy_lr_issue", **kwargs):
+    return MLEnv(task_id=task_id)

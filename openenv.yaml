@@ -1,50 +1,36 @@
-name: csti-support-intelligence
+name: "ml-experiment-debugger"
 version: "1.0.0"
-description: >
-  A real-world OpenEnv environment for AI-driven customer support triage.
-  Agents must analyze incoming tickets, route them to the correct department,
-  assign a priority level, and apply relevant metadata tags.
-author: "Naresh Prajapat"
+description: "A real-world environment where an AI agent acts as an ML Engineer to debug and optimize broken training experiments."
+author: "Antigravity"
 tags:
-  - openenv
-  - triage
-  - customer-support
-  - classification
-  - real-world
+  - machine-learning
+  - debugging
+  - software-engineering
+  - technical-reasoning
 
 environment:
   type: structured
-  max_steps: 1
+  max_steps: 10
   entry_point: "decision_env.env:create_env"
 
 tasks:
-  - id: easy_login_issue
-    name: "Password Reset Help (Easy)"
-    difficulty: easy
-    description: "Clear technical support request for a password reset."
-    grader: "decision_env.grader:TriageGrader"
+  - id: "easy_lr_issue"
+    name: "Sub-optimal Learning Rate"
+    difficulty: "easy"
+    description: "The experiment fails to converge due to an extremely low learning rate."
+  
+  - id: "medium_vanishing_gradient"
+    name: "Deep Network Vanishing Gradients"
+    difficulty: "medium"
+    description: "A deep MLP is missing normalization, causing gradients to vanish and training to stall."
 
-  - id: medium_billing_angry
-    name: "Duplicate Charge & Angry Customer (Medium)"
-    difficulty: medium
-    description: "Mixed intent involving billing error and high negative sentiment."
-    grader: "decision_env.grader:TriageGrader"
-
-  - id: hard_policy_exception
-    name: "VIP Damage Claim & Policy Exception (Hard)"
-    difficulty: hard
-    description: "Complex request with multi-intent ambiguity and emotional tone."
-    grader: "decision_env.grader:TriageGrader"
+  - id: "hard_data_leakage"
+    name: "Validation Split Data Leakage"
+    difficulty: "hard"
+    description: "Identify and fix a case where validation set contamination causes suspiciously perfect metrics that don't generalize."
 
 observation_space:
-  description: >
-    A structured Pydantic Observation containing:
-    - ticket_id, content, customer_segment, sla_deadline, ticket_history, step_count
+  description: "Training config, time-series metrics (loss/accuracy), and simulated console logs."
 
 action_space:
-  description: >
-    A structured Pydantic Action containing:
-    - department: technical, billing, sales, logistics, general
-    - priority: low, medium, high, urgent
-    - tags: list of strings
-    - explanation: optional reasoning
+  description: "Config overrides (dictionary) and training control (run N epochs)."

@@ -1,44 +1,36 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from typing import Dict, Any
 from decision_env.env import create_env
-from decision_env.models import Action
+from models import MLAction, MLObservation
 
-app = FastAPI(title="OpenEnv CSTI Server")
+app = FastAPI(title="ML Experiment Debugging Environment")
 
-# Global state to keep track of active environments by task
+# Global session storage
 envs = {}
 
-class StepRequest(BaseModel):
-    task_id: str
-    action: Dict[str, Any]
-
 @app.get("/")
-def read_root():
-    return {"status": "online", "env": "csti-support-intelligence", "version": "1.0.0"}
+def health():
+    return {"status": "online", "env": "ml-debug-env"}
 
-@app.api_route("/reset", methods=["GET", "POST"])
-def reset(task_id: str = "easy_login_issue"):
+@app.post("/reset")
+def reset(task_id: str = "easy_lr_issue"):
     try:
         env = create_env(task_id=task_id)
         envs[task_id] = env
         obs = env.reset()
-        # Ensure the response is exactly what the validator expects
-        return obs.model_dump()
+        return obs
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Reset failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/step")
-def step(request: StepRequest):
-    if request.task_id not in envs:
-        # Auto-reset if not exists for convenience
-        envs[request.task_id] = create_env(task_id=request.task_id)
-        envs[request.task_id].reset()
+def step(task_id: str, action: MLAction):
+    if task_id not in envs:
+        raise HTTPException(status_code=404, detail="Environment not found. Call /reset first.")
     
     try:
-        obs, reward, done, info = envs[request.task_id].step(request.action)
+        obs, reward, done, info = envs[task_id].step(action)
         return {
-            "observation": obs.model_dump(),
+            "observation": obs,
             "reward": reward,
             "done": done,
             "info": info
@@ -47,10 +39,16 @@ def step(request: StepRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/state")
-def state(task_id: str = "easy_login_issue"):
+def state(task_id: str):
     if task_id not in envs:
-        raise HTTPException(status_code=404, detail="Task environment not initialized.")
-    return envs[task_id].state()
+        raise HTTPException(status_code=404, detail="Environment not found.")
+    env = envs[task_id]
+    return {
+        "task_id": env.task_id,
+        "step_count": env.step_count,
+        "config": env.config,
+        "metrics": env.metrics
+    }
 
 def main():
     import uvicorn
